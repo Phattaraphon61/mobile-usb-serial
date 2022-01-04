@@ -23,6 +23,8 @@ class _MyAppState extends State<MyApp> {
   int _deviceId;
   TextEditingController _textController = TextEditingController();
   int coin = 0;
+  int check = 0;
+  int mode = 0;
 
   Future<bool> _connectTo(device) async {
     _serialData.clear();
@@ -43,8 +45,8 @@ class _MyAppState extends State<MyApp> {
     }
 
     if (device == null) {
-      _deviceId = null;
       setState(() {
+        _deviceId = null;
         _status = "Disconnected";
       });
       return true;
@@ -70,16 +72,26 @@ class _MyAppState extends State<MyApp> {
     _subscription = _transaction.stream.listen((String line) {
       if (line.toString() != "") {
         setState(() {
-          datainfo = line.toString().split(" ").toString()[1]+"k";
+          datainfo = line.toString().split(" ").toString()[1] + "k";
           _serialData.add(Text(line));
           if (_serialData.length > 20) {
             _serialData.removeAt(0);
           }
         });
       }
-      if (line.toString().split(" ").toString()[1] == 'C') {
+      if (line.toString().split(" ").toString()[1] == 'C' && mode != 0) {
         setState(() {
           coin += 10;
+          if (mode == 1 && coin == 30) {
+            mode = 0;
+            coin = 0;
+            check = 0;
+          }
+          if (mode == 2 && coin == 20) {
+            mode = 0;
+            coin = 0;
+            check = 0;
+          }
         });
       }
     });
@@ -119,9 +131,9 @@ class _MyAppState extends State<MyApp> {
 
   @override
   void initState() {
-    // Timer mytime = Timer.periodic(Duration(seconds: 2), (timer) async {
-    //   await _port.write(Uint8List.fromList([13, 10]));
-    // });
+    Timer mytime = Timer.periodic(Duration(seconds: 2), (timer) async {
+      await _port.write(Uint8List.fromList([13, 10]));
+    });
     super.initState();
 
     UsbSerial.usbEventStream.listen((UsbEvent event) {
@@ -142,55 +154,224 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
         debugShowCheckedModeBanner: false,
         home: Scaffold(
+          backgroundColor: Colors.blue,
           // appBar: AppBar(
           //   title: const Text('USB Serial Plugin example app'),
           // ),
-          body: Center(
-              child: Column(children: <Widget>[
-            Text(
-              _ports.length > 0
-                  ? ""
-                  : "",
-            ),
-            ..._ports,
-            // Text('Status: $_status\n'),
-            // ListTile(
-            //   title: TextField(
-            //     controller: _textController,
-            //     decoration: InputDecoration(
-            //       border: OutlineInputBorder(),
-            //       labelText: 'Text To Send',
-            //     ),
-            //   ),
-            //   trailing: RaisedButton(
-            //     child: Text("Send"),
-            //     onPressed: _port == null
-            //         ? null
-            //         : () async {
-            //             if (_port == null) {
-            //               return;
-            //             }
-            //             String data = _textController.text + "\r\n";
-            //             await _port.write(Uint8List.fromList(data.codeUnits));
-            //             _textController.text = "";
-            //           },
-            //   ),
-            // ),
-            Column(
-              children: [
-                Text(
-                  "datainfo is :" + datainfo,
-                ),
-                Text(
-                  "Coin is :" + coin.toString(),
-                ),
-                Text(
-                  "Result Data",
-                ),
-                ..._serialData,
-              ],
-            ),
-          ])),
+          body: check == 0
+              ? SingleChildScrollView(
+                  child: Container(
+                  child: Column(children: <Widget>[
+                    Text(
+                      _ports.length > 0 ? "" : "",
+                    ),
+                    if (_deviceId == null) ...[..._ports],
+                    SizedBox(
+                      height: 80,
+                    ),
+                    Text(
+                      'จ่ายง่ายได้ซัก',
+                      style: TextStyle(
+                          fontSize: 30,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.redAccent),
+                    ),
+                    Container(
+                      child: Column(
+                        children: [
+                          SizedBox(
+                            height: 40,
+                          ),
+                          new InkWell(
+                            onTap: () async {
+                              print("STANDARD");
+                              String data = 'N' + "\r\n";
+                              await _port
+                                  .write(Uint8List.fromList(data.codeUnits));
+                              setState(() {
+                                mode = 1;
+                                check = 2;
+                              });
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 16.0, vertical: 24.0),
+                              height: 250,
+                              child: Card(
+                                color: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: Container(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      ListTile(
+                                        title: const Text(
+                                          'มาตรฐาน',
+                                          style: TextStyle(
+                                              fontSize: 30, color: Colors.blue),
+                                        ),
+                                        subtitle: Text(
+                                          'STANDARD',
+                                          style: TextStyle(
+                                              color:
+                                                  Colors.blue.withOpacity(0.6)),
+                                        ),
+                                      ),
+                                      ListTile(
+                                        title: const Text(
+                                          'รายละเอียด : ',
+                                          style: TextStyle(
+                                              fontSize: 25,
+                                              color: Colors.black),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 50),
+                                        child: Text(
+                                          'เวลา : 40',
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              color: Colors.black),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 50),
+                                        child: Text(
+                                          'ราคา : 30',
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              color: Colors.black),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          new InkWell(
+                            onTap: () async {
+                              print("QUICK");
+                              String data = 'Q' + "\r\n";
+                              await _port
+                                  .write(Uint8List.fromList(data.codeUnits));
+                              setState(() {
+                                mode = 2;
+                                check = 2;
+                              });
+                            },
+                            child: Container(
+                              padding: EdgeInsets.symmetric(
+                                  horizontal: 16.0, vertical: 24.0),
+                              height: 250,
+                              child: Card(
+                                color: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12.0),
+                                ),
+                                child: Container(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      ListTile(
+                                        title: const Text(
+                                          'ซักด่วน',
+                                          style: TextStyle(
+                                              fontSize: 30, color: Colors.blue),
+                                        ),
+                                        subtitle: Text(
+                                          'QUICK',
+                                          style: TextStyle(
+                                              color:
+                                                  Colors.blue.withOpacity(0.6)),
+                                        ),
+                                      ),
+                                      ListTile(
+                                        title: const Text(
+                                          'รายละเอียด : ',
+                                          style: TextStyle(
+                                              fontSize: 25,
+                                              color: Colors.black),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 50),
+                                        child: Text(
+                                          'เวลา : 25',
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              color: Colors.black),
+                                        ),
+                                      ),
+                                      Padding(
+                                        padding:
+                                            const EdgeInsets.only(left: 50),
+                                        child: Text(
+                                          'ราคา : 20',
+                                          style: TextStyle(
+                                              fontSize: 18,
+                                              color: Colors.black),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          )
+                        ],
+                      ),
+                    ),
+                    // Text('Status: $_status\n'),
+                    // ListTile(
+                    //   title: TextField(
+                    //     controller: _textController,
+                    //     decoration: InputDecoration(
+                    //       border: OutlineInputBorder(),
+                    //       labelText: 'Text To Send',
+                    //     ),
+                    //   ),
+                    //   trailing: RaisedButton(
+                    //     child: Text("Send"),
+                    //     onPressed: _port == null
+                    //         ? null
+                    //         : () async {
+                    //             if (_port == null) {
+                    //               return;
+                    //             }
+                    //             String data = _textController.text + "\r\n";
+                    //             await _port.write(Uint8List.fromList(data.codeUnits));
+                    //             _textController.text = "";
+                    //           },
+                    //   ),
+                    // ),
+                    // Column(
+                    //   children: [
+
+                    // Text(
+                    //   "datainfo is :" + datainfo,
+                    // ),
+                    // Text(
+                    //   "Coin is :" + coin.toString(),
+                    // ),
+                    // Text(
+                    //   "Result Data",
+                    // ),
+                    // ..._serialData,
+                    //   ],
+                    // ),
+                  ]),
+                ))
+              : check == 2
+                  ? Center(child: Text("หน้าสอง" + coin.toString()))
+                  : null,
         ));
   }
 }
